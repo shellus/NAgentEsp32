@@ -8,6 +8,9 @@
 #define USER_BUTTON_PIN 0
 #define LED_D2_PIN 2
 
+// 记录 NAgentConnect status，只有在连接成功后才在loop接收输入
+bool NAgentConnected = false;
+
 // 按钮事件处理
 void onButton(){
     Serial.println("Button pressed");
@@ -59,12 +62,26 @@ void setup() {
     Serial.println("================= ESP32 setup complete =================");
 
     // 所有初始化完成后，再执行连接
-    if (NAgentConnectExec) {
-        NAgentConnect();
+    if (NAgentConnectExec && NAgentConnect()) {
+        NAgentConnected = true;
     }
 }
 
 void loop() {
+    loopButton();
+
+    loopSerial();
+
+    if (NAgentConnected) {
+        if (!NAgentLoop()) {
+            Serial.println("NAgent disconnected");
+            NAgentConnected = false;
+        }
+        NAgentHeartbeat();
+    }
+}
+
+void loopButton() {
     // 监听按钮按下
     static uint8_t lastPinState = 1;
     uint8_t pinState = digitalRead(USER_BUTTON_PIN);
@@ -72,42 +89,47 @@ void loop() {
         onButton();
     }
     lastPinState = pinState;
+}
 
-    // 监听串口输入
-    String input = "";
-    while(Serial.available()) {
-        input += (char)Serial.read();
-    }
-    // 将输入内容在前面加上'# '并原样输出，用于调试
-    if(input.length() > 0) {
-        Serial.print("# ");
-        Serial.println(input);
-    }
+void loopSerial() {
+        // 监听串口输入
+        String input = "";
+        while(Serial.available()) {
+            input += (char)Serial.read();
+        }
+        // 将输入内容在前面加上'# '并原样输出，用于调试
+        if(input.length() > 0) {
+            Serial.print("# ");
+            Serial.println(input);
+        }
 
-    // 如果输入内容以 "wifi:" 开头，那么认为这是一个 WiFi 配置信息
-    if(input.startsWith("wifi:")) {
-        int commaIndex = input.indexOf(',');
-        if(commaIndex != -1) {
-            String ssid = input.substring(5, commaIndex);
-            String password = input.substring(commaIndex + 1);
-            password.trim();
-            if (onWifi(ssid, password)) {
-                saveWifiConfig(ssid, password);
-                NAgentConnect();
+        // 如果输入内容以 "wifi:" 开头，那么认为这是一个 WiFi 配置信息
+        if(input.startsWith("wifi:")) {
+            int commaIndex = input.indexOf(',');
+            if(commaIndex != -1) {
+                String ssid = input.substring(5, commaIndex);
+                String password = input.substring(commaIndex + 1);
+                password.trim();
+                if (onWifi(ssid, password)) {
+                    saveWifiConfig(ssid, password);
+                    if (NAgentConnect()) {
+                        NAgentConnected = true;
+                    }
+                }
             }
         }
-    }
-    if(input.startsWith("clearWifi")) {
-        clearWifi();
-    }
-    // 如果输入内容以 "pin:" 开头，那么认为这是一个 GPIO 控制信息
-    if(input.startsWith("pin:")) {
-        int commaIndex = input.indexOf(',');
-        if(commaIndex != -1) {
-            String pin = input.substring(4, commaIndex);
-            String value = input.substring(commaIndex + 1);
-            value.trim();
-            onPin(pin, value);
+
+        if(input.startsWith("clearWifi")) {
+            clearWifi();
         }
-    }
+        // 如果输入内容以 "pin:" 开头，那么认为这是一个 GPIO 控制信息
+        if(input.startsWith("pin:")) {
+            int commaIndex = input.indexOf(',');
+            if(commaIndex != -1) {
+                String pin = input.substring(4, commaIndex);
+                String value = input.substring(commaIndex + 1);
+                value.trim();
+                onPin(pin, value);
+            }
+        }
 }
