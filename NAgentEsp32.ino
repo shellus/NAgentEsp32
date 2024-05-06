@@ -8,6 +8,8 @@
 #define USER_BUTTON_PIN 0
 #define LED_D2_PIN 2
 
+// WiFi状态
+bool wifiConnected = false;
 // 记录 NAgentConnect status，只有在连接成功后才在loop接收输入
 bool NAgentConnected = false;
 
@@ -16,7 +18,7 @@ void onButton(){
     Serial.println("Button pressed");
 }
 
-// pin:2,1 处理
+// pin设置命令处理
 void onPin(String pin, String value){
     int pinNumber = pin.toInt();
     int pinValue = value.toInt();
@@ -25,12 +27,23 @@ void onPin(String pin, String value){
     digitalWrite(pinNumber, pinValue);
 }
 
+// wifi连接后，可能是开机时候，也可能是配置成功后
+void wifiConnectAfter(){
+    if (!NAgentConnectReady()) {
+        Serial.println("NAgent not ready");
+        return;
+    }
+    String authJson;
+    if (loadAuthJson(authJson) && NAgentConnect(authJson)) {
+        NAgentConnected = true;
+    }
+}
 
 void setup() {
     Serial.begin(115200);
     Serial.setDebugOutput(true);
-    // 输出串口清屏代码
-    Serial.println("\033[2J\033[H");
+
+    Serial.println("");
     Serial.println("================= ESP32 start =================");
 
     // 准备按钮
@@ -44,12 +57,11 @@ void setup() {
         Serial.println("SPIFFS Mount Success");
     }
 
-    bool NAgentConnectExec = false;
     // 如果之前有wifi配置，那么尝试连接
     if(SPIFFS.exists("/wifi.json")) {
         String ssid, password;
         if (loadWifiConfig(ssid, password) && onWifi(ssid, password)) {
-            NAgentConnectExec = true;
+            wifiConnected = true;
         }
     } else {
         Serial.println("No WiFi config found");
@@ -62,8 +74,8 @@ void setup() {
     Serial.println("================= ESP32 setup complete =================");
 
     // 所有初始化完成后，再执行连接
-    if (NAgentConnectExec && NAgentConnect()) {
-        NAgentConnected = true;
+    if (wifiConnected) {
+        wifiConnectAfter();
     }
 }
 
@@ -112,12 +124,29 @@ void loopSerial() {
                 password.trim();
                 if (onWifi(ssid, password)) {
                     saveWifiConfig(ssid, password);
-                    if (NAgentConnect()) {
-                        NAgentConnected = true;
-                    }
+                    wifiConnected = true;
+                    wifiConnectAfter();
                 }
             }
         }
+
+        // 如果是authJson，那么认为这是一个认证信息
+        // 注意了，arduino所有的“json” 都是“Json” 而不是“JSON”
+        if(input.startsWith("authJson:")) {
+            String authJson = input.substring(9);
+            authJson.trim();
+            if (NAgentConnect(authJson)) {
+                saveAuthJson(authJson);
+                NAgentConnected = true;
+                Serial.println("NAgent connected, authJson saved.");
+            } else {
+                Serial.println("NAgent connect failed, authJson not saved.");
+            }
+        }
+        if(input.startsWith("clearAuthJson")) {
+            clearAuthJson();
+        }
+
 
         if(input.startsWith("clearWifi")) {
             clearWifi();

@@ -5,47 +5,49 @@ WiFiClient client;
 // 最后活跃时间 lastActiveTime
 unsigned long lastActiveTime = 0;
 
-#define AgentAuthRequest 1
-#define TypeHeartbeat 7
-#define ResponseOK 5
-#define ResponseError 6
+#define AgentAuthRequest 710
+#define TypeHeartbeat 712
+#define ResponseOK 100
+#define ResponseError 110
 
-// getAuthJson
-String getAuthJson() {
-    // todo 改为从文件读取json配置
-    // 生成一个这样的UUID "77115baf-3e05-485c-a449-24b465e9fdb7"
-    String uuid = "77115baf-3e05-485c-a449-24b465e9fdb7";
-    // auth.json 内容
-//    {
-//      "id": "77115baf-3e05-485c-a449-24b465e9fdb7",
-//      "wol_infos": [
-//        {
-//          "name": "myServer-001",
-//          "mac_addr": "10:90:27:e9:c4:99",
-//          "port": 9,
-//          "broadcast_addr": "10.242.255.255",
-//          "ip": "10.242.38.27"
-//        }
-//      ]
-//    }
-
-    DynamicJsonDocument doc(1024);
-    doc["id"] = uuid;
-    JsonArray wol_infos = doc.createNestedArray("wol_infos");
-    JsonObject wol_info = wol_infos.createNestedObject();
-    wol_info["name"] = "myServer-001";
-    wol_info["mac_addr"] = "10:90:27:e9:c4:99";
-    wol_info["port"] = 9;
-    wol_info["broadcast_addr"] = "10.242.255.255";
-    wol_info["ip"] = "10.242.38.27";
-
-    String authJson = "";
-    serializeJson(doc, authJson);
-    return authJson;
+void clearAuthJson() {
+    if (SPIFFS.exists("/auth.json")) {
+        SPIFFS.remove("/auth.json");
+        Serial.println("auth.json file removed.");
+    }
+}
+bool NAgentConnectReady() {
+    // todo 增加NServer地址检查，不再使用默认的
+    return SPIFFS.exists("/auth.json");
 }
 
-bool NAgentConnect () {
-    String host = "192.168.6.115";
+bool saveAuthJson(String authJson) {
+    // 如果成功，存为文件
+    File configFile = SPIFFS.open("/auth.json", "w");
+    if (!configFile) {
+        Serial.println("Failed to open auth.json file for writing");
+        return false;
+    }
+    configFile.print(authJson);
+    configFile.close();
+    Serial.println("auth.json file saved.");
+    return true;
+}
+
+bool loadAuthJson(String &authJson) {
+    File configFile = SPIFFS.open("/auth.json", "r");
+    if (!configFile) {
+        Serial.println("Failed to open auth.json file for reading");
+        return false;
+    }
+    authJson = configFile.readString();
+    configFile.close();
+    Serial.println("auth.json file loaded.");
+    return true;
+}
+
+bool NAgentConnect (String authJson) {
+    String host = "10.1.52.155";
     String port = "8080";
     Serial.println("Start NAgentConnect to " + host + ":" + port + " ...");
 
@@ -55,7 +57,6 @@ bool NAgentConnect () {
     }
     Serial.println("NAgentConnect connection success.");
 
-    String authJson = getAuthJson();
     // 发送请求，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
     uint32_t type = AgentAuthRequest;
     uint32_t len = authJson.length();
@@ -70,28 +71,30 @@ bool NAgentConnect () {
     // 使用 NAgentRead 读取返回
     uint32_t responseType;
     String errorStr;
-    NAgentReadOkOrError(responseType, errorStr);
-    return true;
-
-    // 如果成功，存为文件
-    File configFile = SPIFFS.open("/auth.json", "w");
-    if (!configFile) {
-        Serial.println("Failed to open auth.json file for writing");
+    if (NAgentReadOkOrError(responseType, errorStr)) {
+        // 刷新心跳时间
+        lastActiveTime = millis();
+        Serial.println("NAgentConnect response success.");
+        return true;
+    } else {
+        Serial.println("NAgentConnect response fail.");
         return false;
     }
-
-    // 刷新心跳时间
-    lastActiveTime = millis();
-    return true;
 }
 bool NAgentReadOkOrError(uint32_t &responseType, String &errorStr) {
     if (!NAgentRead(responseType, errorStr, 1000)) {
+        Serial.println("NAgentReadOkOrError timeout.");
         return false;
     }
-    if (responseType == ResponseOK || responseType == ResponseError) {
+    if (responseType == ResponseOK) {
         return true;
+    } else if(responseType == ResponseError) {
+        Serial.println("NAgentReadOkOrError got error response: " + errorStr);
+        return false;
+    } else {
+        Serial.println("NAgentReadOkOrError got other response type: " + String(responseType));
+        return false;
     }
-    return false;
 }
 // 读出 type, authJson
 bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) {
@@ -110,7 +113,6 @@ bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) 
     // 读取返回，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
     uint32_t responseType2;
     uint32_t responseLen;
-    // todo 这里的类型有问题，编译不通过
     client.read((uint8_t *)&responseType2, sizeof(responseType2));
     client.read((uint8_t *)&responseLen, sizeof(responseLen));
     responseType = responseType2;
@@ -122,8 +124,10 @@ bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) 
         }
         responseJson += client.readString();
     }
-
-    Serial.println("NAgentRead response received. responseType: " + String(responseType) + ", responseLen: " + String(responseLen) + ", responseJson: " + responseJson);
+    // 如果类型为ResponseOK则不打印，因为这没有任何问题
+    if (responseType != ResponseOK) {
+        Serial.println("NAgentRead response received. responseType: " + String(responseType) + ", responseLen: " + String(responseLen) + ", responseJson: " + responseJson);
+    }
     return true;
 }
 
@@ -157,6 +161,10 @@ void NAgentHeartbeat() {
     client.write((uint8_t *)&type, sizeof(type));
     client.write((uint8_t *)&len, sizeof(len));
 
-    Serial.println("NAgentHeartbeat request sent.");
-    lastActiveTime = now;
+    Serial.println("NAgentHeartbeat request sent in " + String(now) + ".");
+    uint32_t responseType;
+    String errorStr;
+    if (NAgentReadOkOrError(responseType, errorStr)) {
+        lastActiveTime = now;
+    }
 }
