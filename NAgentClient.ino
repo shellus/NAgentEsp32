@@ -67,9 +67,6 @@ bool NAgentConnect () {
 
     // 等待返回
     Serial.println("NAgentConnect wait response...");
-    while (client.available() < 8) {
-        delay(100);
-    }
     // 使用 NAgentRead 读取返回
     uint32_t responseType;
     String errorStr;
