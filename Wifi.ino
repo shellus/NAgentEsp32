@@ -1,3 +1,4 @@
+// todo wifi配置改为从config获取和设置
 void clearWifi(){
     // 删除 WiFi 配置 json
     Serial.println("Clear WiFi config from flash");

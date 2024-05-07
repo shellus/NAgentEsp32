@@ -10,52 +10,16 @@ unsigned long lastActiveTime = 0;
 #define ResponseOK 100
 #define ResponseError 110
 
-void clearAuthJson() {
-    if (SPIFFS.exists("/auth.json")) {
-        SPIFFS.remove("/auth.json");
-        Serial.println("auth.json file removed.");
-    }
-}
-bool NAgentConnectReady() {
-    // todo 增加NServer地址检查，不再使用默认的
-    return SPIFFS.exists("/auth.json");
-}
-
-bool saveAuthJson(String authJson) {
-    // 如果成功，存为文件
-    File configFile = SPIFFS.open("/auth.json", "w");
-    if (!configFile) {
-        Serial.println("Failed to open auth.json file for writing");
-        return false;
-    }
-    configFile.print(authJson);
-    configFile.close();
-    Serial.println("auth.json file saved.");
-    return true;
-}
-
-bool loadAuthJson(String &authJson) {
-    File configFile = SPIFFS.open("/auth.json", "r");
-    if (!configFile) {
-        Serial.println("Failed to open auth.json file for reading");
-        return false;
-    }
-    authJson = configFile.readString();
-    configFile.close();
-    Serial.println("auth.json file loaded.");
-    return true;
-}
-
 bool NAgentConnect (String authJson) {
-    String host = "10.1.52.155";
-    String port = "8080";
+    String addr = getConfigString("nstartup_server");
+    String host = addr.substring(0, addr.indexOf(":"));
+    String port = addr.substring(addr.indexOf(":") + 1);
     Serial.println("Start NAgentConnect to " + host + ":" + port + " ...");
-
     if (!client.connect(host.c_str(), port.toInt())) {
-        Serial.println("NAgentConnect connection failed.");
+        Serial.println("TCP Client connect failed.");
         return false;
     }
-    Serial.println("NAgentConnect connection success.");
+    Serial.println("TCP Client connect success.");
 
     // 发送请求，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
     uint32_t type = AgentAuthRequest;
@@ -147,13 +111,11 @@ bool NAgentLoop() {
 }
 
 void NAgentHeartbeat() {
-
     // 每隔60秒发送一次心跳
     unsigned long now = millis();
     if (now - lastActiveTime < HEARTBEAT_INTERVAL) {
         return;
     }
-
 
     // 发送心跳，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
     uint32_t type = TypeHeartbeat;
