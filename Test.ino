@@ -2,8 +2,8 @@
 void Test() {
     TestParseCommand("commandName");
     TestParseCommand("commandName");
-    TestParseCommand("commandName:arg1");
-    TestParseCommand("commandName:arg1,arg2,arg3,");
+    TestParseCommand("commandName arg1");
+    TestParseCommand("commandName arg1 arg2 arg3 ");
 }
 
 void TestParseCommand(String input) {

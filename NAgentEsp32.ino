@@ -120,7 +120,7 @@ void loopSerial() {
         input = input.substring(0, input.length() - 1);
     }
     if (input == "") {
-        Serial.println("# Empty input");
+        Serial.println("# type \"help\" list all commands");
         return;
     }
     // 将输入内容在前面加上'# '并原样输出，用作输入反馈
@@ -177,7 +177,8 @@ void loopSerial() {
         ESP.restart();
     } else if (command == "test") {
         Test();
-        // PrintSPIFFSFileList
+    } else if (command == "help") {
+        PrintHelp();
     } else if (command == "list") {
         PrintSPIFFSFileList();
     } else if (command == "read") {
@@ -187,6 +188,6 @@ void loopSerial() {
         }
         PrintSPIFFSFileContent(args[0]);
     } else {
-        Serial.println("Unknown command");
+        Serial.println("Unknown command [" + command + "], type \"help\" list all commands");
     }
 }
