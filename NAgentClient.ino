@@ -46,7 +46,7 @@ bool NAgentConnect (String authJson) {
     }
 }
 bool NAgentReadOkOrError(uint32_t &responseType, String &errorStr) {
-    if (!NAgentRead(responseType, errorStr, 1000)) {
+    if (!NAgentRead(responseType, errorStr, 1 * 1000)) {
         Serial.println("NAgentReadOkOrError timeout.");
         return false;
     }
@@ -67,7 +67,7 @@ bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) 
     while (client.available() < 8) {
         if (millis() - start > timeout) {
             if (timeout != 0) {
-                Serial.println("NAgentRead timeout.");
+                Serial.println("NAgentRead head timeout.");
             }
             return false;
         }
@@ -75,11 +75,11 @@ bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) 
     }
 
     // 读取返回，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
-    uint32_t responseType2;
-    uint32_t responseLen;
-    client.read((uint8_t *)&responseType2, sizeof(responseType2));
-    client.read((uint8_t *)&responseLen, sizeof(responseLen));
-    responseType = responseType2;
+    // WiFiClient 是 Stream 的子类，所以可以直接使用 Stream 的方法，例如readBytes
+    byte headBytes[8];
+    client.readBytes(headBytes, 8);
+    responseType = byteUInt32(headBytes);
+    uint32_t responseLen = byteUInt32(headBytes + 4);
     responseJson = "";
     // 读取到responseLen数据足够为止
     while (responseJson.length() < responseLen) {
@@ -97,7 +97,7 @@ bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) 
 
 bool NAgentLoop() {
     if (!client.connected()) {
-        Serial.println("NAgentLoop client not connected, try to reconnect.");
+        Serial.println("NAgentLoop client not connected.");
         return false;
     }
 

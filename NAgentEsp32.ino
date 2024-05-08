@@ -49,6 +49,12 @@ void setup() {
     Serial.println("");
     Serial.println("================= ESP32 start =================");
 
+    // 打印调试信息
+    Serial.print("ESP32 SDK: ");
+    Serial.println(ESP.getSdkVersion());
+    // 打印芯片的唯一ID
+    Serial.print("ESP32 Chip ID: ");
+    Serial.println(ESP.getEfuseMac(), HEX);
     // 准备按钮
     pinMode(USER_BUTTON_PIN, INPUT_PULLUP);
 
@@ -70,16 +76,12 @@ void setup() {
         Serial.println("No WiFi config found");
     }
 
-    // 打印调试信息
-    Serial.print("ESP32 SDK: ");
-    Serial.println(ESP.getSdkVersion());
-
-    Serial.println("================= ESP32 setup complete =================");
-
     // 所有初始化完成后，再执行连接
     if (wifiConnected) {
+        Serial.println("WiFi wifiConnect after action:");
         wifiConnectAfter();
     }
+    Serial.println("================= ESP32 setup complete =================");
 }
 
 void loop() {
@@ -173,6 +175,8 @@ void loopSerial() {
             return;
         }
         onPin(args[0], args[1]);
+    } else if (command == "sleep") {
+        LightSleep();
     } else if (command == "restart") {
         ESP.restart();
     } else if (command == "test") {
@@ -181,6 +185,12 @@ void loopSerial() {
         PrintHelp();
     } else if (command == "list") {
         PrintSPIFFSFileList();
+    } else if (command == "write") {
+        if (args.size() != 2) {
+            Serial.println("Invalid write command");
+            return;
+        }
+        WriteSPIFFSFile(args[0], args[1]);
     } else if (command == "read") {
         if (args.size() != 1) {
             Serial.println("Invalid read command");
