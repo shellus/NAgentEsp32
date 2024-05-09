@@ -13,25 +13,31 @@ unsigned long lastActiveTime = 0;
 #define ResponseError 110
 
 // todo WiFiClient 如何知道连接断开，需要维护_clientConnected的状态变化
+// todo 例如服务端断开，wifi断开，睡眠唤醒断开
 
-void _clientConnect() {
+bool _clientConnect() {
     if (_clientConnected) {
-        return;
+        return true;
     }
-    String addr = getConfigString("nstartup_server");
-    String host = addr.substring(0, addr.indexOf(":"));
-    String port = addr.substring(addr.indexOf(":") + 1);
-    Serial.println("Start NAgentAuth to " + host + ":" + port + " ...");
+    String host, port;
+    if (!getConfigServer(host, port)) {
+        Serial.println("TCP Client connect address not found.");
+        return false;
+    }
+    Serial.println("TCP Client connect to " + host + ":" + port + " ...");
     if (!client.connect(host.c_str(), port.toInt())) {
         Serial.println("TCP Client connect failed.");
-        return;
+        return false;
     }
     Serial.println("TCP Client connect success.");
     _clientConnected = true;
+    return true;
 }
 
 bool NAgentRegister(String &authJson) {
-    _clientConnect();
+    if (!_clientConnect()) {
+        return false;
+    }
     uint32_t type = TypeNAgentRegister;
     uint32_t len = 0;
     client.write((uint8_t *)&type, sizeof(type));
@@ -48,7 +54,9 @@ bool NAgentRegister(String &authJson) {
 
 
 bool NAgentAuth (String authJson) {
-    _clientConnect();
+    if (!_clientConnect()) {
+        return false;
+    }
     // 发送请求，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
     uint32_t type = TypeNAgentAuth;
     uint32_t len = authJson.length();

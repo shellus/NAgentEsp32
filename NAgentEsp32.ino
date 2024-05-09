@@ -48,6 +48,7 @@ void wifiConnectAfter(){
     }
     if (NAgentAuth(authJson)) {
         NAgentAuthed = true;
+        GattServerStart("成功人士" + GetBootNum());
     }
 }
 
@@ -64,15 +65,14 @@ void setup() {
       chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
     }
 
-    Serial.printf("ESP32 Chip model: %s Rev %d in %d cores\n", ESP.getChipModel(), ESP.getChipRevision(), ESP.getChipCores());
-    Serial.printf("Chip ID: %d (", chipId);
-    Serial.print(ESP.getEfuseMac(), HEX);
-    Serial.println(")");
-    Serial.print("ESP32 SDK: ");
-    Serial.println(ESP.getSdkVersion());
+    Serial.printf("ESP32 Chip %d model: %s Rev %d in %d cores\n", chipId, ESP.getChipModel(), ESP.getChipRevision(), ESP.getChipCores());
 
-    // 准备按钮
-    pinMode(USER_BUTTON_PIN, INPUT_PULLUP);
+    // 还有这些可用信息
+    // 来自： <User_Dir>\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.11\cores\esp32\Esp.cpp
+    // getFreeSketchSpace
+    // getSketchMD5 getSketchSize sketchSize
+    // getMaxAllocPsram getMinFreePsram
+    // getFreePsram getPsramSize
 
     // SPIFFS 初始化
     if(!SPIFFS.begin(true)){
@@ -81,12 +81,21 @@ void setup() {
     } else {
         Serial.println("SPIFFS Mount Success");
     }
+    // 加载全局配置
+    LoadConfig();
+
+    // 打印开机次数
+    Serial.println("Boot number: " + String(IncBootNum()));
+    // 准备按钮
+    pinMode(USER_BUTTON_PIN, INPUT_PULLUP);
 
     // 如果之前有wifi配置，那么尝试连接
-    if(SPIFFS.exists("/wifi.json")) {
-        String ssid, password;
-        if (loadWifiConfig(ssid, password) && onWifi(ssid, password)) {
+    String ssid, password;
+    if(getConfigWifi(ssid, password)) {
+        if (onWifi(ssid, password)) {
             wifiConnected = true;
+        } else {
+            Serial.println("WiFi connect failed");
         }
     } else {
         Serial.println("No WiFi config found");
@@ -161,10 +170,16 @@ void loopSerial() {
         String ssid = args[0];
         String password = args[1];
         if (onWifi(ssid, password)) {
-            saveWifiConfig(ssid, password);
+            setConfigWifi(ssid, password);
             wifiConnected = true;
             wifiConnectAfter();
         }
+    } else if (command == "server") {
+        if (args.size() != 2) {
+            Serial.println("Invalid server command");
+            return;
+        }
+        setConfigServer(args[0], args[1]);
     } else if (command == "setConfigString") {
         if (args.size() != 2) {
             Serial.println("Invalid setConfigString command");
