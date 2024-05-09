@@ -64,17 +64,18 @@ void PrintHelp() {
 }
 
 // 修改低功耗模式
-void LightSleep() {
+void LightSleep(uint32_t sleep_time) {
+    // 实际测试结果：Light-sleep 会丢失TCP连接，但是不会丢失WiFi连接
 
-    esp_err_t err = esp_sleep_enable_uart_wakeup(0);
-    if (err != ESP_OK) {
-        Serial.println("esp_sleep_enable_uart_wakeup err: " + String(err));
-        return;
-    }
+// 串口唤醒不管用
+//    esp_err_t err = esp_sleep_enable_uart_wakeup(0);
+//    if (err != ESP_OK) {
+//        Serial.println("esp_sleep_enable_uart_wakeup err: " + String(err));
+//        return;
+//    }
 
-    // 唤醒时间秒数变量
-    uint64_t wakeup_time_sec = 10;
-    esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000);
+    // 定时器的精度是微妙：也就是毫秒*1000
+    esp_sleep_enable_timer_wakeup(sleep_time * 1000);
 
     Serial.println("Light sleep start in " + String(millis() / 1000) + "s");
     //    delay(100); 调用 flush 就不需要 delay 了

@@ -91,10 +91,13 @@ void loop() {
 
     if (NAgentConnected) {
         if (!NAgentLoop()) {
-            Serial.println("NAgent disconnected");
+            Serial.println("NAgent loop read failed disconnected");
             NAgentConnected = false;
         }
-        NAgentHeartbeat();
+        if (!NAgentHeartbeatTimer()) {
+            Serial.println("NAgent heartbeat failed disconnected");
+            NAgentConnected = false;
+        }
     }
 }
 
@@ -176,9 +179,11 @@ void loopSerial() {
         }
         onPin(args[0], args[1]);
     } else if (command == "sleep") {
-        LightSleep();
-    } else if (command == "restart") {
+        LightSleep(10 * 1000);
+    } else if (command == "reboot") {
         ESP.restart();
+    } else if (command == "connect") {
+        wifiConnectAfter();
     } else if (command == "test") {
         Test();
     } else if (command == "help") {

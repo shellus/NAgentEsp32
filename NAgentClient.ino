@@ -1,7 +1,7 @@
 WiFiClient client;
 
-// 心跳间隔时间60秒
-#define HEARTBEAT_INTERVAL 60000
+// 心跳间隔毫秒数
+#define HEARTBEAT_INTERVAL 30000
 // 最后活跃时间 lastActiveTime
 unsigned long lastActiveTime = 0;
 
@@ -71,7 +71,7 @@ bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) 
             }
             return false;
         }
-        delay(100);
+        delay(10);
     }
 
     // 读取返回，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
@@ -81,6 +81,7 @@ bool NAgentRead(uint32_t &responseType, String &responseJson, uint32_t timeout) 
     responseType = byteUInt32(headBytes);
     uint32_t responseLen = byteUInt32(headBytes + 4);
     responseJson = "";
+    Serial.println("NAgentRead response received. responseType: " + String(responseType) + ", responseLen: " + String(responseLen));
     // 读取到responseLen数据足够为止
     while (responseJson.length() < responseLen) {
         if (millis() - start > timeout) {
@@ -110,11 +111,11 @@ bool NAgentLoop() {
     return true;
 }
 
-void NAgentHeartbeat() {
+bool NAgentHeartbeatTimer() {
     // 每隔60秒发送一次心跳
     unsigned long now = millis();
     if (now - lastActiveTime < HEARTBEAT_INTERVAL) {
-        return;
+        return true;
     }
 
     // 发送心跳，格式为：<type LittleEndian.Uint32><len LittleEndian.Uint32><json String>
@@ -123,10 +124,12 @@ void NAgentHeartbeat() {
     client.write((uint8_t *)&type, sizeof(type));
     client.write((uint8_t *)&len, sizeof(len));
 
-    Serial.println("NAgentHeartbeat request sent in " + String(now) + ".");
+    Serial.println("NAgentHeartbeat request sent in " + String(now/1000) + "s.");
     uint32_t responseType;
     String errorStr;
     if (NAgentReadOkOrError(responseType, errorStr)) {
         lastActiveTime = now;
+        return true;
     }
+    return false;
 }
