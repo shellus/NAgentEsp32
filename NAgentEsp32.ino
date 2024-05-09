@@ -59,11 +59,18 @@ void setup() {
     Serial.println("================= ESP32 start =================");
 
     // 打印调试信息
+    uint32_t chipId = 0;
+    for(int i=0; i<17; i=i+8) {
+      chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+    }
+
+    Serial.printf("ESP32 Chip model: %s Rev %d in %d cores\n", ESP.getChipModel(), ESP.getChipRevision(), ESP.getChipCores());
+    Serial.printf("Chip ID: %d (", chipId);
+    Serial.print(ESP.getEfuseMac(), HEX);
+    Serial.println(")");
     Serial.print("ESP32 SDK: ");
     Serial.println(ESP.getSdkVersion());
-    // 打印芯片的唯一ID
-    Serial.print("ESP32 Chip ID: ");
-    Serial.println(ESP.getEfuseMac(), HEX);
+
     // 准备按钮
     pinMode(USER_BUTTON_PIN, INPUT_PULLUP);
 

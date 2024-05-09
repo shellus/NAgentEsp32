@@ -12,6 +12,8 @@ unsigned long lastActiveTime = 0;
 #define ResponseOK 100
 #define ResponseError 110
 
+// todo WiFiClient 如何知道连接断开，需要维护_clientConnected的状态变化
+
 void _clientConnect() {
     if (_clientConnected) {
         return;
