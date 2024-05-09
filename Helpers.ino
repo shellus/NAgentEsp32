@@ -69,14 +69,14 @@ void PrintHelp() {
     Serial.println("  read <filename> - read SPIFFS file content");
     Serial.println("  write <filename> <content> - write SPIFFS file content");
     Serial.println("  delete <filename> - delete SPIFFS file");
-    Serial.println("  sleep - enter light-sleep mode");
+    Serial.println("  lightSleep <seconds> - light sleep for <seconds> seconds");
+    Serial.println("  deepSleep <seconds> - deep sleep for <seconds> seconds");
 }
 
-// 修改低功耗模式
-void LightSleep(uint32_t sleep_time) {
+void ESPLightSleep(uint32_t sleep_seconds) {
     // 实际测试结果：Light-sleep 会丢失TCP连接，但是不会丢失WiFi连接
 
-// 串口唤醒不管用
+// 串口唤醒不管用，不知道是不是因为没设置字符数
 //    esp_err_t err = esp_sleep_enable_uart_wakeup(0);
 //    if (err != ESP_OK) {
 //        Serial.println("esp_sleep_enable_uart_wakeup err: " + String(err));
@@ -84,14 +84,33 @@ void LightSleep(uint32_t sleep_time) {
 //    }
 
     // 定时器的精度是微妙：也就是毫秒*1000
-    esp_sleep_enable_timer_wakeup(sleep_time * 1000);
+    esp_sleep_enable_timer_wakeup(sleep_seconds * 1000000);
 
-    Serial.println("Light sleep start in " + String(millis() / 1000) + "s");
-    //    delay(100); 调用 flush 就不需要 delay 了
+    Serial.printf("Light-sleep [%d]seconds in:%d seconds\n", sleep_seconds, millis() / 1000);
     Serial.flush();
+
     esp_light_sleep_start();
     // 唤醒后会从此处继续执行，所以下面一句叫"Light sleep wakeup"
-    Serial.println("Light sleep wakeup in: " + String(millis() / 1000) + "s");
+    Serial.printf("Light-sleep wakeup in: %d seconds\n", millis() / 1000);
 
     // 经过上面的代码得到结论，light sleep 模式下，millis() 会继续计时
+}
+
+RTC_DATA_ATTR bool isDeepSleep = false;
+RTC_DATA_ATTR int incDeepSleep = 0;
+
+void ESPDeepSleep(uint32_t sleep_seconds) {
+
+    // 定时器的精度是微妙：也就是毫秒*1000
+    esp_sleep_enable_timer_wakeup(sleep_seconds * 1000000);
+
+    Serial.printf("Deep-sleep [%d]seconds in:%d seconds\n", sleep_seconds, millis() / 1000);
+    Serial.flush();
+
+    isDeepSleep = true;
+    ++incDeepSleep;
+
+    esp_deep_sleep_start();
+    // 下一次会从setup()开始执行，所以下面永远不会执行
+    Serial.printf("Deep-sleep wakeup in: %d seconds\n", millis() / 1000);
 }

@@ -51,15 +51,7 @@ void wifiConnectAfter(){
         GattServerStart("成功人士" + GetBootNum());
     }
 }
-
-void setup() {
-    Serial.begin(115200);
-    Serial.setDebugOutput(true);
-
-    Serial.println("");
-    Serial.println("================= ESP32 start =================");
-
-    // 打印调试信息
+void printDebugInfo() {
     uint32_t chipId = 0;
     for(int i=0; i<17; i=i+8) {
       chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
@@ -73,6 +65,23 @@ void setup() {
     // getSketchMD5 getSketchSize sketchSize
     // getMaxAllocPsram getMinFreePsram
     // getFreePsram getPsramSize
+}
+void setup() {
+    Serial.begin(115200);
+    Serial.setDebugOutput(true);
+    // 准备按钮
+    pinMode(USER_BUTTON_PIN, INPUT_PULLUP);
+
+    Serial.println("");
+
+    bool WAKEUP_BY_TIMER = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER;
+    Serial.printf("\n================= ESP32 %s start =================\n", WAKEUP_BY_TIMER ? "wakeup" : "setup");
+
+    // 打印调试信息
+    if(!WAKEUP_BY_TIMER) {
+        printDebugInfo();
+    }
+
 
     // SPIFFS 初始化
     if(!SPIFFS.begin(true)){
@@ -85,9 +94,9 @@ void setup() {
     LoadConfig();
 
     // 打印开机次数
-    Serial.println("Boot number: " + String(IncBootNum()));
-    // 准备按钮
-    pinMode(USER_BUTTON_PIN, INPUT_PULLUP);
+    if (!WAKEUP_BY_TIMER) {
+        Serial.println("Boot number: " + String(IncBootNum()));
+    }
 
     // 如果之前有wifi配置，那么尝试连接
     String ssid, password;
@@ -106,7 +115,7 @@ void setup() {
         Serial.println("WiFi wifiConnect after action:");
         wifiConnectAfter();
     }
-    Serial.println("================= ESP32 setup complete =================");
+    Serial.printf("\n================= ESP32 %s complete =================\n", WAKEUP_BY_TIMER ? "wakeup" : "setup");
 }
 
 void loop() {
@@ -209,8 +218,18 @@ void loopSerial() {
             return;
         }
         onPin(args[0], args[1]);
-    } else if (command == "sleep") {
-        LightSleep(10 * 1000);
+    } else if (command == "lightSleep") {
+        if (args.size() != 1) {
+            Serial.println("Invalid lightSleep command");
+            return;
+        }
+        ESPLightSleep(args[0].toInt());
+    } else if (command == "deepSleep") {
+        if (args.size() != 1) {
+            Serial.println("Invalid deepSleep command");
+            return;
+        }
+        ESPDeepSleep(args[0].toInt());
     } else if (command == "reboot") {
         ESP.restart();
     } else if (command == "connect") {
