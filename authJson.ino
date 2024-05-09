@@ -21,6 +21,10 @@ bool saveAuthJson(String authJson) {
 }
 
 bool loadAuthJson(String &authJson) {
+    if (!SPIFFS.exists("/auth.json")) {
+        Serial.println("auth.json file does not exist.");
+        return false;
+    }
     File configFile = SPIFFS.open("/auth.json", "r");
     if (!configFile) {
         Serial.println("Failed to open auth.json file for reading");

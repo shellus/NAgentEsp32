@@ -17,8 +17,8 @@
 
 // WiFi状态
 bool wifiConnected = false;
-// 记录 NAgentConnect status，只有在连接成功后才在loop接收输入
-bool NAgentConnected = false;
+// 记录 NAgentAuth status，只有在连接成功后才在loop接收输入
+bool NAgentAuthed = false;
 
 // 按钮事件处理
 void onButton(){
@@ -37,8 +37,17 @@ void onPin(String pin, String value){
 // wifi连接后，可能是开机时候，也可能是配置成功后
 void wifiConnectAfter(){
     String authJson;
-    if (loadAuthJson(authJson) && NAgentConnect(authJson)) {
-        NAgentConnected = true;
+    if (!loadAuthJson(authJson)) {
+        Serial.println("No auth.json found, start register");
+        if (NAgentRegister(authJson)) {
+            saveAuthJson(authJson);
+        } else {
+            Serial.println("Register failed");
+            return;
+        }
+    }
+    if (NAgentAuth(authJson)) {
+        NAgentAuthed = true;
     }
 }
 
@@ -89,14 +98,14 @@ void loop() {
 
     loopSerial();
 
-    if (NAgentConnected) {
+    if (NAgentAuthed) {
         if (!NAgentLoop()) {
             Serial.println("NAgent loop read failed disconnected");
-            NAgentConnected = false;
+            NAgentAuthed = false;
         }
         if (!NAgentHeartbeatTimer()) {
             Serial.println("NAgent heartbeat failed disconnected");
-            NAgentConnected = false;
+            NAgentAuthed = false;
         }
     }
 }
@@ -202,6 +211,12 @@ void loopSerial() {
             return;
         }
         PrintSPIFFSFileContent(args[0]);
+    } else if (command == "delete") {
+        if (args.size() != 1) {
+            Serial.println("Invalid delete command");
+            return;
+        }
+        DeleteSPIFFSFile(args[0]);
     } else {
         Serial.println("Unknown command [" + command + "], type \"help\" list all commands");
     }

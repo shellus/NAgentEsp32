@@ -35,6 +35,14 @@ void WriteSPIFFSFile(String filename, String content) {
   Serial.println("  File [" + filename + "] saved");
 }
 
+void DeleteSPIFFSFile(String filename) {
+  if (SPIFFS.remove(filename)) {
+    Serial.println("  File [" + filename + "] removed");
+  } else {
+    Serial.println("  ERROR: Failed to remove file [" + filename + "]");
+  }
+}
+
 uint32_t byteUInt32(byte buffer[4]) {
   // 将缓冲区中的四个字节按小端序转换成uint32_t
   uint32_t result = (uint32_t)buffer[0] |
@@ -46,21 +54,22 @@ uint32_t byteUInt32(byte buffer[4]) {
 }
 
 void PrintHelp() {
-  Serial.println("Available commands:");
-  Serial.println("  wifi <ssid> <password> - connect to wifi");
-  Serial.println("  setConfigString <key> <value> - set config string");
-  Serial.println("  getConfigString <key> - get config string");
-  Serial.println("  deleteConfig <key> - delete config");
-  Serial.println("  printConfig - print config");
-  Serial.println("  clearWifi - clear wifi config");
-  Serial.println("  pin <pin> <value> - set pin value");
-  Serial.println("  restart - restart ESP");
-  Serial.println("  test - test function");
-  Serial.println("  help - print this help");
-  Serial.println("  list - list SPIFFS files");
-  Serial.println("  read <filename> - read SPIFFS file content");
-  Serial.println("  write <filename> <content> - write SPIFFS file content");
-  Serial.println("  sleep - enter light-sleep mode");
+    Serial.println("Available commands:");
+    Serial.println("  wifi <ssid> <password> - connect to wifi");
+    Serial.println("  setConfigString <key> <value> - set config string");
+    Serial.println("  getConfigString <key> - get config string");
+    Serial.println("  deleteConfig <key> - delete config");
+    Serial.println("  printConfig - print config");
+    Serial.println("  clearWifi - clear wifi config");
+    Serial.println("  pin <pin> <value> - set pin value");
+    Serial.println("  restart - restart ESP");
+    Serial.println("  test - test function");
+    Serial.println("  help - print this help");
+    Serial.println("  list - list SPIFFS files");
+    Serial.println("  read <filename> - read SPIFFS file content");
+    Serial.println("  write <filename> <content> - write SPIFFS file content");
+    Serial.println("  delete <filename> - delete SPIFFS file");
+    Serial.println("  sleep - enter light-sleep mode");
 }
 
 // 修改低功耗模式
