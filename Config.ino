@@ -5,6 +5,7 @@ DynamicJsonDocument configObj(1024);
 
 // 默认的配置
 void setDefaultConfig(){
+    configObj["device_name"] = "NA-" + getRandString(8);
 //    configObj["nstartup_server_addr"] = "nstartup.dev.lan";
 //    configObj["nstartup_server_port"] = "8080";
 }

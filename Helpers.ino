@@ -53,6 +53,41 @@ uint32_t byteUInt32(byte buffer[4]) {
   return result;
 }
 
+// 生成a-z, 0-9的随机字符串
+String getRandString(uint32_t length) {
+  String result = "";
+  for (uint32_t i = 0; i < length; ++i) {
+    char c;
+    if (random(0, 2) == 0) {
+      c = random(0, 26) + 'a';
+    } else {
+      c = random(0, 10) + '0';
+    }
+    result += c;
+  }
+  return result;
+}
+// 生成uuid字符串
+String getUUID() {
+  String result = "";
+  for (uint32_t i = 0; i < 32; ++i) {
+    char c;
+    if (i == 8 || i == 12 || i == 16 || i == 20) {
+      c = '-';
+    } else {
+      c = random(0, 16);
+      if (c < 10) {
+        c += '0';
+      } else {
+        c += 'a' - 10;
+      }
+    }
+    result += c;
+  }
+  return result;
+}
+
+
 void PrintHelp() {
     Serial.println("Available commands:");
     Serial.println("  wifi <ssid> <password> - connect to wifi");

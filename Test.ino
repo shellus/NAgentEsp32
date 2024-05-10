@@ -1,9 +1,7 @@
 
 void Test() {
-    TestParseCommand("commandName");
-    TestParseCommand("commandName");
-    TestParseCommand("commandName arg1");
-    TestParseCommand("commandName arg1 arg2 arg3 ");
+    String s = getRandString(8);
+    Serial.println(s);
 }
 
 void TestParseCommand(String input) {
