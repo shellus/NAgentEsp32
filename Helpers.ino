@@ -3,16 +3,15 @@ void PrintSPIFFSFileList() {
   File root = SPIFFS.open("/");
   File file = root.openNextFile();
   while (file) {
-    Serial.println("  /" + String(file.name()));
+    Serial.printf("  /%s, size: %d bytes\n", file.name(), file.size());
     file.close();
     file = root.openNextFile();
   }
 }
 
-void PrintSPIFFSFileContent(String filename) {
-  Serial.print("SPIFFS File [" + filename + "] Content:");
-
-  File file = SPIFFS.open(filename, "r");
+void PrintSPIFFSFileContent(std::string filename) {
+    Serial.printf("SPIFFS File [%s] Content:", filename.c_str());
+  File file = SPIFFS.open(filename.c_str(), "r");
   if (!file) {
     Serial.println("  ERROR: File not found");
     return;
@@ -24,22 +23,22 @@ void PrintSPIFFSFileContent(String filename) {
   Serial.println();
 }
 
-void WriteSPIFFSFile(String filename, String content) {
-  File file = SPIFFS.open(filename, "w");
+void WriteSPIFFSFile(std::string filename, std::string content) {
+  File file = SPIFFS.open(filename.c_str(), "w");
   if (!file) {
     Serial.println("  ERROR: Failed to open file for writing");
     return;
   }
-  file.print(content);
+  file.print(content.c_str());
   file.close();
-  Serial.println("  File [" + filename + "] saved");
+    Serial.printf("  File [%s] saved\n", filename.c_str());
 }
 
-void DeleteSPIFFSFile(String filename) {
-  if (SPIFFS.remove(filename)) {
-    Serial.println("  File [" + filename + "] removed");
+void DeleteSPIFFSFile(std::string filename) {
+  if (SPIFFS.remove(filename.c_str())) {
+    Serial.printf("  File [%s] removed\n", filename.c_str());
   } else {
-    Serial.println("  ERROR: Failed to remove file [" + filename + "]");
+    Serial.printf("  ERROR: Failed to remove file [%s]\n", filename.c_str());
   }
 }
 
@@ -54,8 +53,8 @@ uint32_t byteUInt32(byte buffer[4]) {
 }
 
 // 生成a-z, 0-9的随机字符串
-String getRandString(uint32_t length) {
-  String result = "";
+std::string getRandString(uint32_t length) {
+  std::string result = "";
   for (uint32_t i = 0; i < length; ++i) {
     char c;
     if (random(0, 2) == 0) {
@@ -68,8 +67,8 @@ String getRandString(uint32_t length) {
   return result;
 }
 // 生成uuid字符串
-String getUUID() {
-  String result = "";
+std::string getUUID() {
+  std::string result = "";
   for (uint32_t i = 0; i < 32; ++i) {
     char c;
     if (i == 8 || i == 12 || i == 16 || i == 20) {

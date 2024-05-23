@@ -26,17 +26,17 @@ void onButton(){
 }
 
 // pin设置命令处理
-void onPin(String pin, String value){
-    int pinNumber = pin.toInt();
-    int pinValue = value.toInt();
-    Serial.println("Set pin output Mode [" + String(pinNumber) + "] to " + String(pinValue));
+void onPin(std::string pin, std::string value){
+    int pinNumber = atoi(pin.c_str());
+    int pinValue = atoi(value.c_str());
+    Serial.printf("Set pin output Mode [%d] to %d\n", pinNumber, pinValue);
     pinMode(pinNumber, OUTPUT);
     digitalWrite(pinNumber, pinValue);
 }
 
 // wifi连接后，可能是开机时候，也可能是配置成功后
 void wifiConnectAfter(){
-    String authJson;
+    std::string authJson;
     if (!loadAuthJson(authJson)) {
         Serial.println("No auth.json found, start register");
         if (NAgentRegister(authJson)) {
@@ -48,7 +48,7 @@ void wifiConnectAfter(){
     }
     if (NAgentAuth(authJson)) {
         NAgentAuthed = true;
-        GattServerStart("成功人士" + GetBootNum());
+        GattServerStart(GetBootNum());
     }
 }
 void printDebugInfo() {
@@ -95,11 +95,11 @@ void setup() {
 
     // 打印开机次数
     if (!WAKEUP_BY_TIMER) {
-        Serial.println("Boot number: " + String(IncBootNum()));
+        Serial.printf("Boot number: %d\n", IncBootNum());
     }
 
     // 如果之前有wifi配置，那么尝试连接
-    String ssid, password;
+    std::string ssid, password;
     if(getConfigWifi(ssid, password)) {
         if (onWifi(ssid, password)) {
             wifiConnected = true;
@@ -147,7 +147,7 @@ void loopButton() {
 
 void loopSerial() {
     // 监听串口输入
-    String input = "";
+    std::string input = "";
     while(Serial.available()) {
         input += (char)Serial.read();
     }
@@ -155,110 +155,20 @@ void loopSerial() {
         return;
     }
     // 串口输入的可能有带换行符，将其去掉
-    if (input.endsWith("\n")) {
-        input = input.substring(0, input.length() - 1);
+    if (input[input.length() - 1] == '\n') {
+        input = input.substr(0, input.length() - 1);
     }
     if (input == "") {
         Serial.println("# type \"help\" list all commands");
         return;
     }
     // 将输入内容在前面加上'# '并原样输出，用作输入反馈
-    Serial.println("# " + input);
+    Serial.printf("# %s\n", input.c_str());
 
-    String command;
-    std::vector<String> args;
-    if (!ParseCommand(input, &command, args)) {
-        Serial.println("Parse command failed");
-        return;
-    }
-    if (command == "wifi") {
-        if (args.size() != 2) {
-            Serial.println("Invalid wifi command");
-            return;
-        }
-        String ssid = args[0];
-        String password = args[1];
-        if (onWifi(ssid, password)) {
-            setConfigWifi(ssid, password);
-            wifiConnected = true;
-            wifiConnectAfter();
-        }
-    } else if (command == "server") {
-        if (args.size() != 2) {
-            Serial.println("Invalid server command");
-            return;
-        }
-        setConfigServer(args[0], args[1]);
-    } else if (command == "setConfigString") {
-        if (args.size() != 2) {
-            Serial.println("Invalid setConfigString command");
-            return;
-        }
-        setConfigString(args[0], args[1]);
-    } else if (command == "getConfigString") {
-        if (args.size() != 1) {
-            Serial.println("Invalid getConfigString command");
-            return;
-        }
-        String value = getConfigString(args[0]);
-        Serial.println(value);
-    } else if (command == "deleteConfig") {
-        if (args.size() != 1) {
-            Serial.println("Invalid deleteConfig command");
-            return;
-        }
-        deleteConfig(args[0]);
-    } else if (command == "printConfig") {
-        printConfig();
-    } else if (command == "clearWifi") {
-        clearWifi();
-    } else if (command == "pin") {
-        if (args.size() != 2) {
-            Serial.println("Invalid pin command");
-            return;
-        }
-        onPin(args[0], args[1]);
-    } else if (command == "lightSleep") {
-        if (args.size() != 1) {
-            Serial.println("Invalid lightSleep command");
-            return;
-        }
-        ESPLightSleep(args[0].toInt());
-    } else if (command == "deepSleep") {
-        if (args.size() != 1) {
-            Serial.println("Invalid deepSleep command");
-            return;
-        }
-        ESPDeepSleep(args[0].toInt());
-    } else if (command == "reboot") {
-        ESP.restart();
-    } else if (command == "connect") {
-        wifiConnectAfter();
-    } else if (command == "test") {
-        Test();
-    } else if (command == "help") {
-        PrintHelp();
-    } else if (command == "list") {
-        PrintSPIFFSFileList();
-    } else if (command == "write") {
-        if (args.size() != 2) {
-            Serial.println("Invalid write command");
-            return;
-        }
-        WriteSPIFFSFile(args[0], args[1]);
-    } else if (command == "read") {
-        if (args.size() != 1) {
-            Serial.println("Invalid read command");
-            return;
-        }
-        PrintSPIFFSFileContent(args[0]);
-    } else if (command == "delete") {
-        if (args.size() != 1) {
-            Serial.println("Invalid delete command");
-            return;
-        }
-        DeleteSPIFFSFile(args[0]);
-    } else {
-        Serial.println("Unknown command [" + command + "], type \"help\" list all commands");
-    }
+    std::string command;
+    std::vector<std::string> args;
+    std::string lineBuf = input.c_str();
+
+    ParseCommand(lineBuf, command, args);
+    dispatchCommand(command, args);
 }

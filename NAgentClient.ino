@@ -19,13 +19,14 @@ bool _clientConnect() {
     if (_clientConnected) {
         return true;
     }
-    String host, port;
+    std::string host, port;
     if (!getConfigServer(host, port)) {
         Serial.println("TCP Client connect address not found.");
         return false;
     }
-    Serial.println("TCP Client connect to " + host + ":" + port + " ...");
-    if (!client.connect(host.c_str(), port.toInt())) {
+    Serial.printf("TCP Client connect to %s:%s ...\n", host.c_str(), port.c_str());
+//    if (!client.connect(host.c_str(), port.toInt())) {
+    if (!client.connect(host.c_str(), atoi(port.c_str()))) {
         Serial.println("TCP Client connect failed.");
         return false;
     }
@@ -34,7 +35,7 @@ bool _clientConnect() {
     return true;
 }
 
-bool NAgentRegister(String &authJson) {
+bool NAgentRegister(std::string &authJson) {
     if (!_clientConnect()) {
         return false;
     }
@@ -46,14 +47,14 @@ bool NAgentRegister(String &authJson) {
     Serial.println("NAgentRegister request sent.");
     uint32_t responseType;
     if (_NAgentReadOkOrError(responseType, authJson)) {
-        Serial.println("NAgentRegister got: " + authJson);
+        Serial.printf("NAgentRegister got: %s\n", authJson.c_str());
         return true;
     }
     return false;
 }
 
 
-bool NAgentAuth (String authJson) {
+bool NAgentAuth (std::string authJson) {
     if (!_clientConnect()) {
         return false;
     }
@@ -62,7 +63,7 @@ bool NAgentAuth (String authJson) {
     uint32_t len = authJson.length();
     client.write((uint8_t *)&type, sizeof(type));
     client.write((uint8_t *)&len, sizeof(len));
-    client.print(authJson);
+    client.print(authJson.c_str());
 
     Serial.println("NAgentAuth request sent.");
 
@@ -70,7 +71,7 @@ bool NAgentAuth (String authJson) {
     Serial.println("NAgentAuth wait response...");
     // 使用 _NAgentRead 读取返回
     uint32_t responseType;
-    String responseStr;
+    std::string responseStr;
     if (_NAgentReadOkOrError(responseType, responseStr)) {
         // 刷新心跳时间
         lastActiveTime = millis();
@@ -81,7 +82,7 @@ bool NAgentAuth (String authJson) {
         return false;
     }
 }
-bool _NAgentReadOkOrError(uint32_t &responseType, String &responseStr) {
+bool _NAgentReadOkOrError(uint32_t &responseType, std::string &responseStr) {
     if (!_NAgentRead(responseType, responseStr, 1 * 1000)) {
         Serial.println("_NAgentReadOkOrError timeout.");
         return false;
@@ -89,15 +90,15 @@ bool _NAgentReadOkOrError(uint32_t &responseType, String &responseStr) {
     if (responseType == ResponseOK) {
         return true;
     } else if(responseType == ResponseError) {
-        Serial.println("_NAgentReadOkOrError got error response: " + responseStr);
+        Serial.printf("_NAgentReadOkOrError got error response: %s\n", responseStr.c_str());
         return false;
     } else {
-        Serial.println("_NAgentReadOkOrError got other response type: " + String(responseType));
+        Serial.printf("_NAgentReadOkOrError got other response type: %d\n", responseType);
         return false;
     }
 }
 // 读出 type, authJson
-bool _NAgentRead(uint32_t &responseType, String &responseStr, uint32_t timeout) {
+bool _NAgentRead(uint32_t &responseType, std::string &responseStr, uint32_t timeout) {
     // timeout
     unsigned long start = millis();
     while (client.available() < 8) {
@@ -117,17 +118,20 @@ bool _NAgentRead(uint32_t &responseType, String &responseStr, uint32_t timeout) 
     responseType = byteUInt32(headBytes);
     uint32_t responseLen = byteUInt32(headBytes + 4);
     responseStr = "";
-    Serial.println("_NAgentRead response received. responseType: " + String(responseType) + ", responseLen: " + String(responseLen));
+    Serial.printf("_NAgentRead response received. responseType: %d, responseLen: %d\n", responseType, responseLen);
     // 读取到responseLen数据足够为止
     while (responseStr.length() < responseLen) {
         if (millis() - start > timeout) {
             return false;
         }
-        responseStr += client.readString();
+//        responseStr += client.readString();
+        while (client.available() > 0) {
+            responseStr += (char)client.read();
+        }
     }
     // 如果类型为ResponseOK则不打印，因为这没有任何问题
     if (responseType != ResponseOK) {
-        Serial.println("_NAgentRead response received. responseType: " + String(responseType) + ", responseLen: " + String(responseLen) + ", responseStr: " + responseStr);
+        Serial.printf("_NAgentRead response received. responseType: %d, responseLen: %d, responseStr: %s\n", responseType, responseLen, responseStr.c_str());
     }
     return true;
 }
@@ -139,9 +143,9 @@ bool NAgentLoop() {
     }
 
     uint32_t responseType;
-    String responseStr = "";
+    std::string responseStr = "";
     if (_NAgentRead(responseType, responseStr, 0)) {
-        Serial.println("NAgentLoop response received. responseType: " + String(responseType) + ", responseStr: " + responseStr);
+        Serial.printf("NAgentLoop response received. responseType: %d, responseStr: %s\n", responseType, responseStr.c_str());
     }
 
     return true;
@@ -160,9 +164,9 @@ bool NAgentHeartbeatTimer() {
     client.write((uint8_t *)&type, sizeof(type));
     client.write((uint8_t *)&len, sizeof(len));
 
-    Serial.println("NAgentHeartbeat request sent in " + String(now/1000) + "s.");
+    Serial.printf("NAgentHeartbeat request sent. lastActiveTime: %d, now: %d\n", lastActiveTime, now);
     uint32_t responseType;
-    String responseStr;
+    std::string responseStr;
     if (_NAgentReadOkOrError(responseType, responseStr)) {
         lastActiveTime = now;
         return true;

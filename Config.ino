@@ -9,36 +9,40 @@ void setDefaultConfig(){
 //    configObj["nstartup_server_addr"] = "nstartup.dev.lan";
 //    configObj["nstartup_server_port"] = "8080";
 }
-void setConfigServer(String addr, String port){
+void setConfigServer(std::string addr, std::string port){
     configObj["nstartup_server_addr"] = addr;
     configObj["nstartup_server_port"] = port;
     saveConfig();
-    Serial.println("Success to set server config: " + addr + " = " + port);
+//    Serial.println("Success to set server config: " + addr + " = " + port);
+    Serial.printf("Success to set server config: %s = %s\n", addr.c_str(), port.c_str());
 }
-bool getConfigServer(String &addr, String &port){
+bool getConfigServer(std::string &addr, std::string &port){
     if (!configObj.containsKey("nstartup_server_addr")) {
         return false;
     }
-    addr = configObj["nstartup_server_addr"].as<String>();
-    port = configObj["nstartup_server_port"].as<String>();
-    Serial.println("Success to get server config: " + addr + " = " + port);
+    addr = configObj["nstartup_server_addr"].as<std::string>();
+    port = configObj["nstartup_server_port"].as<std::string>();
+//    Serial.println("Success to get server config: " + addr + " = " + port);
+    Serial.printf("Success to get server config: %s = %s\n", addr.c_str(), port.c_str());
     return true;
 }
 
-void setConfigWifi(String ssid, String password){
+void setConfigWifi(std::string ssid, std::string password){
     configObj["wifi_ssid"] = ssid;
     configObj["wifi_password"] = password;
     saveConfig();
-    Serial.println("Success to set wifi config: " + ssid + " = " + password);
+//    Serial.println("Success to set wifi config: " + ssid + " = " + password);
+    Serial.printf("Success to set wifi config: %s = %s\n", ssid.c_str(), password.c_str());
 }
-bool getConfigWifi(String &ssid, String &password){
+bool getConfigWifi(std::string &ssid, std::string &password){
     if (!configObj.containsKey("wifi_ssid")) {
         return false;
     }
 
-    ssid = configObj["wifi_ssid"].as<String>();
-    password = configObj["wifi_password"].as<String>();
-    Serial.println("Success to get wifi config: " + ssid + " = " + password);
+    ssid = configObj["wifi_ssid"].as<std::string>();
+    password = configObj["wifi_password"].as<std::string>();
+//    Serial.println("Success to get wifi config: " + ssid + " = " + password);
+    Serial.printf("Success to get wifi config: %s = %s\n", ssid.c_str(), password.c_str());
     return ssid.length() > 0;
 }
 void clearWifiConfig(){
@@ -50,7 +54,7 @@ void clearWifiConfig(){
 
 // 自增和返回开机次数
 uint32_t IncBootNum(){
-    String key = "boot_num";
+    std::string key = "boot_num";
     uint32_t value = configObj[key] | 0;
     value++;
     configObj[key] = value;
@@ -58,20 +62,22 @@ uint32_t IncBootNum(){
     return value;
 }
 
-String GetBootNum(){
+std::string GetBootNum(){
     return configObj["boot_num"];
 }
 
-void setConfigString(String key, String value){
+void setConfigString(std::string key, std::string value){
     configObj[key] = value;
     saveConfig();
-    Serial.println("Success to set config string: " + key + " = " + value);
+//    Serial.println("Success to set config string: " + key + " = " + value);
+    Serial.printf("Success to set config string: %s = %s\n", key.c_str(), value.c_str());
 }
 
-void deleteConfig(String key){
+void deleteConfig(std::string key){
     configObj.remove(key);
     saveConfig();
-    Serial.println("Success to delete config key: " + key);
+//    Serial.println("Success to delete config key: " + key);
+    Serial.printf("Success to delete config key: %s\n", key.c_str());
 }
 
 void printConfig(){
@@ -79,9 +85,10 @@ void printConfig(){
     serializeJsonPretty(configObj, Serial);
 }
 
-String getConfigString(String key){
-    String value = configObj[key];
-    Serial.println("Success to get config string: " + key + " = " + value);
+std::string getConfigString(std::string key){
+    std::string value = configObj[key];
+//    Serial.println("Success to get config string: " + key + " = " + value);
+    Serial.printf("Success to get config string: %s = %s\n", key.c_str(), value.c_str());
     return value;
 }
 void saveConfig(){

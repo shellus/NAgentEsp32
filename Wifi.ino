@@ -5,10 +5,10 @@ void clearWifi(){
 }
 
 // wifi:SSID,password 处理
-bool onWifi(String ssid, String password){
+bool onWifi(std::string ssid, std::string password){
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid.c_str(), password.c_str());
-    Serial.println("Try connect to SSID: " + ssid + " with password: " + password + "...");
+    Serial.printf("Try connect to SSID: %s with password: %s...\n", ssid.c_str(), password.c_str());
 
     int maxAttempts = 10; // 10s
     int attempt = 0;
@@ -19,7 +19,7 @@ bool onWifi(String ssid, String password){
     }
     Serial.println("");
     if(WiFi.status() == WL_CONNECTED) {
-        Serial.println("WiFi connected localIP: " + WiFi.localIP().toString());
+        Serial.printf("WiFi connected localIP: %s\n", WiFi.localIP().toString().c_str());
         return true;
     } else {
         Serial.println("WiFi connection failed");
