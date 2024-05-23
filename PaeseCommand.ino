@@ -103,7 +103,7 @@ void dispatchCommand(std::string command, std::vector<std::string> args){
         Test();
     } else if (command == "help") {
         PrintHelp();
-    } else if (command == "list") {
+    } else if (command == "ls") {
         PrintSPIFFSFileList();
     } else if (command == "write") {
         if (args.size() != 2) {
@@ -111,13 +111,13 @@ void dispatchCommand(std::string command, std::vector<std::string> args){
             return;
         }
         WriteSPIFFSFile(args[0], args[1]);
-    } else if (command == "read") {
+    } else if (command == "cat") {
         if (args.size() != 1) {
             Serial.println("Invalid read command");
             return;
         }
         PrintSPIFFSFileContent(args[0]);
-    } else if (command == "delete") {
+    } else if (command == "rm") {
         if (args.size() != 1) {
             Serial.println("Invalid delete command");
             return;
