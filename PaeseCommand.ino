@@ -1,4 +1,36 @@
 #include <string>
+#include <vector>
+#include <stdint.h>
+
+std::vector<uint8_t> bytesStringToBytes(std::string bytesString){
+    std::vector<uint8_t> bytes;
+    // 去掉首尾的[]
+    bytesString = bytesString.substr(1, bytesString.length() - 2);
+    // 以,为分隔符
+    size_t pos = 0;
+    std::string token;
+    while ((pos = bytesString.find(',')) != std::string::npos) {
+        token = bytesString.substr(0, pos);
+        bytes.push_back(atoi(token.c_str()));
+        bytesString.erase(0, pos + 1);
+    }
+    if(!bytesString.empty()){
+        bytes.push_back(atoi(bytesString.c_str()));
+    }
+    return bytes;
+}
+std::string BytesToBytesString(std::vector<uint8_t> bytes){
+    std::string bytesString = "[";
+    for (size_t i = 0; i < bytes.size(); i++) {
+        bytesString += std::to_string(bytes[i]);
+        if(i != bytes.size() - 1){
+            bytesString += ", ";
+        }
+    }
+    bytesString += "]";
+    return bytesString;
+}
+
 // 从字符串里面解析出命令，提供输入内容，返回命令和参数数组
 // 格式为 commandName arg1 arg2 arg3
 // ParseCommand 解析命令
@@ -123,6 +155,23 @@ void dispatchCommand(std::string command, std::vector<std::string> args){
             return;
         }
         DeleteSPIFFSFile(args[0]);
+    } else if (command == "send") {
+        if (args.size() != 2) {
+            Serial.println("Invalid send command");
+            return;
+        }
+        // 发送gatt数据
+        // send <bleMac> <bytes str({255, 255})>
+        std::string bleMac = args[0];
+        std::vector<uint8_t> bytes = bytesStringToBytes(args[1]);
+        if (GattClientConnect(bleMac)) {
+            if (GattClientWrite(bytes)) {
+                std::vector<uint8_t> response;
+                if (GattClientRead(&response)) {
+                    Serial.printf("Response: %s\n", BytesToBytesString(response).c_str());
+                }
+            }
+        }
     } else {
         Serial.printf("Unknown command [%s], type \"help\" list all commands\n", command.c_str());
     }

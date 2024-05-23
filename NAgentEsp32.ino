@@ -146,18 +146,28 @@ void loopButton() {
 }
 
 void loopSerial() {
-    // 监听串口输入
     std::string input = "";
-    while(Serial.available()) {
-        input += (char)Serial.read();
+
+    // 监听串口输入，直到接收到换行符
+    while (true) {
+        if (Serial.available()) {
+            char c = (char)Serial.read();
+            if (c == '\n') {
+                break;
+            }
+            input += c;
+        }
     }
+
     if (input.length() == 0) {
         return;
     }
-    // 串口输入的可能有带换行符，将其去掉
-    if (input[input.length() - 1] == '\n') {
+
+    // 如果输入以回车符结束，去掉它
+    if (input[input.length() - 1] == '\r') {
         input = input.substr(0, input.length() - 1);
     }
+
     if (input == "") {
         Serial.println("# type \"help\" list all commands");
         return;
