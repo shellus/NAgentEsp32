@@ -114,7 +114,14 @@ bool GattClientWrite(std::vector<uint8_t> data) {
   if (!connected || pRemoteCharacteristicW == nullptr) {
     return false;
   }
-  pRemoteCharacteristicW->writeValue(data.data(), data.size());
+  uint16_t mtu = 23-3;
+  int length = data.size();
+  for(uint16_t n = 0; n < length; n += mtu){
+      uint16_t len = length - n > mtu? mtu: length - n;
+      pRemoteCharacteristicW->writeValue(data.data() + n, len);
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+
   return true;
 }
 
